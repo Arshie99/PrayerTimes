@@ -1,3 +1,6 @@
 # PrayerTimes
 prayer times app
-a prayer time app with the most basic functionality.
+A prayer time app with the most basic functionality.
+A pet project to kill time and learn kotlin.
+
+Any comments to improve it are welcome.
