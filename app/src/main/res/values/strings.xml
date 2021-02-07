@@ -1,0 +1,27 @@
+<resources>
+    <string name="app_name">Salat</string>
+
+    <!--    prayer time name    -->
+    <string name="fajr">فجر</string>
+    <string name="zuhar">ظہر</string>
+    <string name="asar">عصر</string>
+    <string name="maghrib">مغرب</string>
+    <string name="ishaa">عشاء</string>
+    <!--    Prayer times name-->
+
+
+    <string name="fajr_time">00.00</string>
+    <string name="Zuhar_time">00.00</string>
+    <string name="Asar_time">00.00</string>
+    <string name="Maghrib_time">00.00</string>
+    <string name="Ishaa_time">00.00</string>
+    <string name="prayer_times">Prayer Times</string>
+    <string name="date">date</string>
+    <string name="appwidget_text">EXAMPLE</string>
+    <string name="add_widget">Add widget</string>
+    <string name="notifications">Notification</string>
+    <string name="notification_title"> prayer time </string>
+    <string name="notification_text"> Go Pray Now </string>
+    <string name="channel_name">pray</string>
+    <string name="channel_description">pray now</string>
+</resources>
