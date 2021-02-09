@@ -1,20 +1,25 @@
 package com.example.prayertimes
 
-import android.app.AlarmManager
-import android.app.AlarmManager.RTC_WAKEUP
-import android.app.PendingIntent
+import android.Manifest
+import android.annotation.SuppressLint
+import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
+import android.location.LocationManager
 import android.os.Build
 import android.os.Bundle
+import android.os.Looper
+import android.provider.Settings
 import android.widget.TextView
 import android.widget.Toast
 import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.app.ActivityCompat
 import com.azan.*
 import com.azan.astrologicalCalc.Location
 import com.azan.astrologicalCalc.SimpleDate
 import com.azan.astrologicalCalc.Utils
-import java.lang.System.currentTimeMillis
+import com.google.android.gms.location.*
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.chrono.HijrahChronology
@@ -29,22 +34,30 @@ class MainActivity : AppCompatActivity() {
     val currentDate = LocalDate.now()
 
     //variables for longitude and latitude
-    var latitude_value = 53.39861110
-    var longitude_value = -6.40055560
+        var latitudeValue = 0.00
+        var longitudeValue = 0.00
+
+
+    //location permission variables
+    var PERMISSION_ID = 11
+    lateinit var mFusedLocationClient: FusedLocationProviderClient
 
     @RequiresApi(Build.VERSION_CODES.O)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
+        //call the location finder function
+        mFusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
 
         //    prayer time calculation
         val today = SimpleDate(GregorianCalendar())
 
+        getLastLocation()
         //the method call for location based prayer times
-        val location = Location(
-            degreeLat = latitude_value,
-            degreeLong = longitude_value,
+        val location1 = Location(
+            degreeLat = latitudeValue,
+            degreeLong = longitudeValue,
             gmtDiff = 0.0,
             dst = 0
         )
@@ -61,16 +74,16 @@ class MainActivity : AppCompatActivity() {
             Madhhab.SHAAFI,
             Utils.DEF_NEAREST_LATITUDE,
             ExtremeLatitude.GOOD_INVALID,
-            offset = true,
-            12.0,
+            offset = false,
             0.0,
             0.0,
             0.0,
             0.0,
-            -13.0
+            0.0,
+            0.0
         )
 
-        val azan = Azan(location, ICC_ireland)
+        val azan = Azan(location1, ICC_ireland)
         val prayerTimes = azan.getPrayerTimes(today)
 
         //display variables
@@ -120,22 +133,121 @@ class MainActivity : AppCompatActivity() {
         var maghrib = prayerTimes.maghrib().toString()
         var ishaa = prayerTimes.ishaa().toString()
 
-        if(System_time == fajr || System_time == zuhar || System_time == asar || System_time == maghrib || System_time == ishaa){
-            startAlert()
-        }
+//        if(System_time == fajr || System_time == zuhar || System_time == asar || System_time == maghrib || System_time == ishaa){
+//            startAlert()
+//        }
+
+
+
 
     }
 
 
-    fun startAlert() {
-        val intent = Intent(this, AlarmReceiver::class.java)
-        val pendingIntent = PendingIntent.getBroadcast(this.applicationContext,
-            234324243,
-            intent,
-            0)
-        val alarmManager = getSystemService(ALARM_SERVICE) as AlarmManager
-        alarmManager[RTC_WAKEUP, currentTimeMillis()] = pendingIntent
-        Toast.makeText(this, "Alarm set", Toast.LENGTH_LONG).show()
+//    fun startAlert() {
+//        val intent = Intent(this, AlarmReceiver::class.java)
+//        val pendingIntent = PendingIntent.getBroadcast(this.applicationContext,
+//            234324243,
+//            intent,
+//            0)
+//        val alarmManager = getSystemService(ALARM_SERVICE) as AlarmManager
+//        alarmManager[RTC_WAKEUP, currentTimeMillis()] = pendingIntent
+//        Toast.makeText(this, "Alarm set", Toast.LENGTH_LONG).show()
+//    }
+
+
+
+    //--------------------------------------------------------------------------------------------
+    //location system implementation
+
+    @SuppressLint("MissingPermission")
+    private fun getLastLocation() {
+        if (checkPermissions()) {
+            if (isLocationEnabled()) {
+                mFusedLocationClient.lastLocation.addOnCompleteListener(this) { task ->
+                    var location: android.location.Location? = task.result
+                    if (location == null) {
+                        requestNewLocationData()
+                    } else {
+//-----------------------------------------------------------------------------------------------
+    //error in value assignment of negative values.
+                        latitudeValue=location.latitude
+                        longitudeValue=location.longitude
+                    }
+                }
+            } else {
+                Toast.makeText(this, "Turn on location", Toast.LENGTH_LONG).show()
+                val intent = Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS)
+                startActivity(intent)
+            }
+        } else {
+            requestPermissions()
+        }
+    }
+
+    @SuppressLint("MissingPermission")
+    private fun requestNewLocationData() {
+        var mLocationRequest = LocationRequest()
+        mLocationRequest.priority = LocationRequest.PRIORITY_HIGH_ACCURACY
+        mLocationRequest.interval = 0
+        mLocationRequest.fastestInterval = 0
+        mLocationRequest.numUpdates = 1
+
+        mFusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
+        mFusedLocationClient!!.requestLocationUpdates(
+            mLocationRequest, mLocationCallback,
+            Looper.myLooper()
+        )
+    }
+
+    private val mLocationCallback = object : LocationCallback() {
+        override fun onLocationResult(locationResult: LocationResult) {
+            var mLastLocation: android.location.Location? = locationResult.lastLocation
+            if (mLastLocation != null) {
+                latitudeValue = mLastLocation.latitude
+            }
+            if (mLastLocation != null) {
+                longitudeValue = mLastLocation.longitude
+            }
+        }
+    }
+
+    private fun isLocationEnabled(): Boolean {
+        var locationManager: LocationManager = getSystemService(Context.LOCATION_SERVICE) as LocationManager
+        return locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER) || locationManager.isProviderEnabled(
+            LocationManager.NETWORK_PROVIDER
+        )
+    }
+
+    private fun checkPermissions(): Boolean {
+        if (ActivityCompat.checkSelfPermission(
+                this,
+                Manifest.permission.ACCESS_COARSE_LOCATION
+            ) == PackageManager.PERMISSION_GRANTED &&
+            ActivityCompat.checkSelfPermission(
+                this,
+                Manifest.permission.ACCESS_FINE_LOCATION
+            ) == PackageManager.PERMISSION_GRANTED
+        ) {
+            return true
+        }
+        return false
+    }
+
+    private fun requestPermissions() {
+        ActivityCompat.requestPermissions(
+            this,
+            arrayOf(Manifest.permission.ACCESS_COARSE_LOCATION, Manifest.permission.ACCESS_FINE_LOCATION),
+            PERMISSION_ID
+        )
+    }
+
+
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<String>, grantResults: IntArray) {
+        if (requestCode == PERMISSION_ID) {
+            if ((grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED)) {
+                getLastLocation()
+            }
+        }
     }
 
 }
